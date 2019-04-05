@@ -1,0 +1,44 @@
+#!/bin/bash
+while true
+do
+  clear
+  echo '
+    O
+   ┌|¬
+   / \'
+
+  sleep 0.2
+  clear
+
+  echo '
+    O
+   ─|┐
+    |\'
+
+  sleep 0.2
+  clear
+
+  echo '
+      O
+     ┌|─
+     /|'
+
+  sleep 0.2
+  clear
+
+  echo '
+      O
+     ─|┐
+      |\'
+
+  sleep 0.2
+  clear
+
+  echo '
+       O
+      ┌|¬
+      / \'
+
+  sleep 0.2
+
+done
