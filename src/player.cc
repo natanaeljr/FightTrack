@@ -42,8 +42,7 @@ int Player::Update()
     if (jump_ticks_ > 0) {
         if (jump_ticks_ > 3) {
             SetPosY(GetPosY() - 1);
-        }
-        else {
+        } else {
             SetPosY(GetPosY() + 1);
         }
         jump_ticks_--;
@@ -56,7 +55,7 @@ int Player::Update()
 
 void Player::Draw(WINDOW* win)
 {
-    art_.Draw(pos_y_, pos_x_, win);
+    art_.Draw(pos_x_, pos_y_, win);
 }
 
 /**************************************************************************************/

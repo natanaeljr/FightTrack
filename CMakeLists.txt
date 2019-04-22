@@ -10,8 +10,13 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 include(cmake/GSL.cmake)
 add_definitions(${GSL_DEFINITIONS})
 
+if(DOWNLOAD_GSL)
+list(APPEND FIGHTTRACK_DEPENDS GSL)
+endif()
+
 # Headers
 include_directories(include)
+include_directories(${GSL_INCLUDE_DIRS})
 
 # Library
 add_library(fighttrack STATIC
@@ -22,6 +27,9 @@ add_library(fighttrack STATIC
 )
 target_link_libraries(fighttrack
     ncurses
+)
+add_dependencies(fighttrack
+    ${FIGHTTRACK_DEPENDS}
 )
 
 # Executable

@@ -71,24 +71,23 @@ int Game::Run(int argc, const char* args[])
     constexpr int kMinLines = 24;
     constexpr int kMinCols = 80;
     if (LINES < kMinLines || COLS < kMinCols) {
-        fprintf(stderr, "Terminal size must be at least %dx%d. Current size is %dx%d\n",
-                kMinLines, kMinCols, LINES, COLS);
+        fprintf(stderr, "Terminal size must be at least %dx%d. Current size is %dx%d\n", kMinLines,
+                kMinCols, LINES, COLS);
         return -2;
     }
+    printf("Terminal window size is %dx%d\n", LINES, COLS);
 
     ConfigureTerminal(stdscr);
 
     /* Create Game window */
-    WINDOW* game_window = newwin(kMinLines - 2, kMinCols - 2, (LINES - kMinLines) / 2,
-                                 (COLS - kMinCols) / 2);
+    WINDOW* game_window
+        = newwin(kMinLines - 2, kMinCols - 2, (LINES - kMinLines) / 2, (COLS - kMinCols) / 2);
     if (game_window == nullptr) {
         fprintf(stderr, "Failed to create the game window\n");
         return -1;
     }
     auto _del_game_window = gsl::finally([&] { delwin(game_window); });
     ConfigureTerminal(game_window);
-    box(game_window, 0, 0);
-    wrefresh(game_window);
 
     running_ = true;
     return Loop(game_window);
