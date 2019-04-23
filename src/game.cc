@@ -17,7 +17,32 @@
 
 namespace fighttrack {
 
-Game::Game() : player_{ "Main" }, running_{ false }
+static const AsciiArt kMapArt{ {
+    "                                                                            ",
+    "                                                                            ",
+    "                                                                            ",
+    "                                                                            ",
+    "                                                                            ",
+    "                                                                            ",
+    "                                                                            ",
+    "                                                                            ",
+    "                                                                            ",
+    "                                                                            ",
+    "                                                                            ",
+    "                                                                            ",
+    "                                                                            ",
+    "                                                                            ",
+    "                                                                            ",
+    "▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓                 ▓▓▓▓▓▓▓▓▓▓                                 ",
+    "                                                                            ",
+    "                    ▓▓▓▓▓▓▓                       ▓▓▓▓▓▓▓▓▓▓                ",
+    "                                                                            ",
+    "         ▓▓▓▓▓▓▓                                                    ▓▓▓▓▓▓▓▓",
+} };
+
+/**************************************************************************************/
+
+Game::Game() : player_{ "Main" }, map_{ kMapArt }, running_{ false }
 {
 }
 
@@ -71,8 +96,8 @@ int Game::Run(int argc, const char* args[])
     constexpr int kMinLines = 24;
     constexpr int kMinCols = 80;
     if (LINES < kMinLines || COLS < kMinCols) {
-        fprintf(stderr, "Terminal size must be at least %dx%d. Current size is %dx%d\n", kMinLines,
-                kMinCols, LINES, COLS);
+        fprintf(stderr, "Terminal size must be at least %dx%d. Current size is %dx%d\n",
+                kMinLines, kMinCols, LINES, COLS);
         return -2;
     }
     printf("Terminal window size is %dx%d\n", LINES, COLS);
@@ -80,8 +105,8 @@ int Game::Run(int argc, const char* args[])
     ConfigureTerminal(stdscr);
 
     /* Create Game window */
-    WINDOW* game_window
-        = newwin(kMinLines - 2, kMinCols - 2, (LINES - kMinLines) / 2, (COLS - kMinCols) / 2);
+    WINDOW* game_window = newwin(kMinLines - 2, kMinCols - 2, (LINES - kMinLines) / 2,
+                                 (COLS - kMinCols) / 2);
     if (game_window == nullptr) {
         fprintf(stderr, "Failed to create the game window\n");
         return -1;
@@ -190,6 +215,7 @@ void Game::Render(WINDOW* win)
     printf("%s\n", __PRETTY_FUNCTION__);
     werase(win);
     box(win, 0, 0);
+    map_.Draw(win);
     player_.Draw(win);
     wrefresh(win);
 }

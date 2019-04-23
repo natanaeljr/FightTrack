@@ -3,6 +3,8 @@
  * \brief ASCII Art declaration.
  */
 
+#pragma once
+
 #include <vector>
 #include <string>
 #include <ncurses.h>

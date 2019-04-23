@@ -14,7 +14,7 @@ Player::Player(std::string name)
     : name_{ name },
       state_{ &PlayerState::States::standing },
       heart_{ 100 },
-      art_{},
+      art_{ {} },
       pos_x_{ 0 },
       pos_y_{ 0 }
 {
@@ -42,7 +42,8 @@ int Player::Update()
     if (jump_ticks_ > 0) {
         if (jump_ticks_ > 3) {
             SetPosY(GetPosY() - 1);
-        } else {
+        }
+        else {
             SetPosY(GetPosY() + 1);
         }
         jump_ticks_--;

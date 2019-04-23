@@ -11,7 +11,7 @@ include(cmake/GSL.cmake)
 add_definitions(${GSL_DEFINITIONS})
 
 if(DOWNLOAD_GSL)
-list(APPEND FIGHTTRACK_DEPENDS GSL)
+    list(APPEND FIGHTTRACK_DEPENDS GSL)
 endif()
 
 # Headers
@@ -24,13 +24,16 @@ add_library(fighttrack STATIC
     src/player.cc
     src/player_states.cc
     src/ascii_art.cc
+    src/map.cc
 )
 target_link_libraries(fighttrack
     ncurses
 )
-add_dependencies(fighttrack
-    ${FIGHTTRACK_DEPENDS}
-)
+if(FIGHTTRACK_DEPENDS)
+    add_dependencies(fighttrack
+        ${FIGHTTRACK_DEPENDS}
+    )
+endif()
 
 # Executable
 add_executable(${PROJECT_NAME}

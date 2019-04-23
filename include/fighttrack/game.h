@@ -7,6 +7,7 @@
 #include <ncurses.h>
 
 #include "fighttrack/player.h"
+#include "fighttrack/map.h"
 
 /**************************************************************************************/
 
@@ -61,6 +62,7 @@ class Game {
 
    private:
     Player player_;
+    Map map_;
     bool running_;
 };
 

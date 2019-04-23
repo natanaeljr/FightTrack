@@ -9,7 +9,8 @@
 
 namespace fighttrack {
 
-AsciiArt::AsciiArt(std::vector<std::string> chars) : matrix_{ chars }, max_x_{ 0 }, max_y_{ 0 }
+AsciiArt::AsciiArt(std::vector<std::string> chars)
+    : matrix_{ chars }, max_x_{ 0 }, max_y_{ 0 }
 {
     max_y_ = matrix_.size();
     for (const auto& seq : matrix_) {
@@ -23,16 +24,32 @@ AsciiArt::AsciiArt(std::vector<std::string> chars) : matrix_{ chars }, max_x_{ 0
 
 void AsciiArt::Draw(int pos_x, int pos_y, WINDOW* win)
 {
-    mvwaddnstr(win, pos_y + 0, pos_x, " o ", 3);
-    mvwaddnstr(win, pos_y + 1, pos_x, "/|\\", 3);
-    mvwaddnstr(win, pos_y + 2, pos_x, "/ \\", 3);
+    for (size_t y = 0; y < matrix_.size(); ++y) {
+        const auto& chars = matrix_[y];
+
+        for (size_t x = 0; x < chars.length();) {
+            size_t x_end = chars.find_first_of(' ', x);
+            x_end = (x_end == std::string::npos ? chars.length() : x_end);
+
+            size_t length = x_end - x;
+            if (length > 0) {
+                mvwaddnstr(win, pos_y + y, pos_x + x, &chars[x], length);
+            }
+
+            x += length + 1;
+        }
+    }
 }
 
 /**************************************************************************************/
 
 char AsciiArt::GetChar(int pos_x, int pos_y)
 {
-    return '\0';
+    /* Check boundaries */
+    if (pos_y >= matrix_.size() || pos_x >= matrix_[pos_y].length()) {
+        return '\0';
+    }
+    return matrix_[pos_y][pos_x];
 }
 
 } /* namespace fighttrack */

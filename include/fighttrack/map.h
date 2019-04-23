@@ -22,6 +22,12 @@ class Map {
      */
     ~Map() = default;
 
+
+    /**
+     * \brief Draw the Map object.
+     */
+    void Draw(WINDOW* win);
+
     /**
      * \brief  Check if a given position a ground.
      * \param x  X postion.

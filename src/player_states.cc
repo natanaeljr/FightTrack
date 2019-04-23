@@ -36,7 +36,12 @@ PlayerState* PlayerState::Standing::HandleInput(Player& player, int input)
 
 void PlayerState::Standing::Update(Player& player)
 {
-    player.SetGraphics(AsciiArt());
+    static const AsciiArt kArtStanding{ {
+        " o ",
+        "/|\\",
+        "/ \\",
+    } };
+    player.SetGraphics(kArtStanding);
 }
 
 /**************************************************************************************/
