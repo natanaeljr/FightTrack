@@ -4,9 +4,9 @@
  */
 #include "fighttrack/game.h"
 
-int main(int argc, const char* args[])
+int main(int argc, const char* argv[])
 {
     fighttrack::Game game;
-    int ret = game.Run(argc, args);
+    int ret = game.Run(argc, argv);
     return ret;
 }

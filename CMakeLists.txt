@@ -42,3 +42,13 @@ add_executable(${PROJECT_NAME}
 target_link_libraries(${PROJECT_NAME}
     fighttrack
 )
+
+# Server
+add_executable(server
+    src/server.cc
+)
+
+# Client
+add_executable(client
+    src/client.cc
+)

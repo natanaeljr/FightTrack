@@ -28,10 +28,10 @@ class Game {
     /**
      * \brief  Run the game loop.
      * \param argc Number of arguments
-     * \param args List of arguments
+     * \param argv List of arguments
      * \return 0 on sucess, negative on error.
      */
-    int Run(int argc, const char* args[]);
+    int Run(int argc, const char* argv[]);
 
    private:
     /**

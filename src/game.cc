@@ -54,11 +54,11 @@ Game::~Game()
 
 /**************************************************************************************/
 
-int Game::Run(int argc, const char* args[])
+int Game::Run(int argc, const char* argv[])
 {
     /* No arguments for now */
     std::ignore = argc;
-    std::ignore = args;
+    std::ignore = argv;
 
     printf("Launch FightTrack...\n");
     fflush(stdout);
