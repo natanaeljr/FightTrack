@@ -23,7 +23,7 @@
 
 /**************************************************************************************/
 
-/** Helper function to transform a interger sequence into a initializer list */
+/** Helper function to transform an interger sequence into a initializer list */
 template<class T, T... I>
 static constexpr auto make_initializer_list(std::integer_sequence<T, I...>)
 {
@@ -243,7 +243,7 @@ int server(uint16_t port)
     }
 
     return 0;
-}  // namespace fighttrack
+}
 
 } /* namespace fighttrack */
 
