@@ -41,10 +41,10 @@ int client(const std::string server_address, uint16_t port)
 
     struct sockaddr_in server_addr;
     server_addr.sin_family = AF_INET;
-    bcopy((char*)server->h_addr, (char*)&server_addr.sin_addr.s_addr, server->h_length);
+    bcopy((char*) server->h_addr, (char*) &server_addr.sin_addr.s_addr, server->h_length);
     server_addr.sin_port = htons(port);
 
-    err = connect(sock, (struct sockaddr*)&server_addr, sizeof(server_addr));
+    err = connect(sock, (struct sockaddr*) &server_addr, sizeof(server_addr));
     if (err == -1) {
         perror("Failed to connect to server");
         return -1;
@@ -56,17 +56,21 @@ int client(const std::string server_address, uint16_t port)
         return -1;
     }
 
-    char buffer[256] = { 0 };
+    char buffer[256];
     n = read(sock, buffer, sizeof(buffer) - 1);
     if (n == -1) {
         perror("Failed to read from server");
         return -1;
-    } else if (n == 0) {
+    }
+    else if (n == 0) {
         printf("Server closed connection");
-    } else {
+    }
+    else {
         buffer[n] = '\0';
         printf("Received '%s'\n", buffer);
     }
+
+    sleep(30);
 
     printf("Client finished\n");
     return 0;
