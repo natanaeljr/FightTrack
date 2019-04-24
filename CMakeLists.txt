@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0)
-project(FightTrack)
+project(fight-track)
 
 # General
 set(CMAKE_CXX_STANDARD 14)

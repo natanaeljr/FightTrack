@@ -13,12 +13,15 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <fcntl.h>
 
 #include <gsl/gsl>
 
 /**************************************************************************************/
 
 namespace fighttrack {
+
+static constexpr size_t kMaxClients = 4;
 
 int server(uint16_t port)
 {
@@ -31,54 +34,95 @@ int server(uint16_t port)
     }
     auto _close_master_socket = gsl::finally([&] { close(master_sock); });
 
-    bool val = true;
-    err = setsockopt(master_sock, SOL_SOCKET, SO_REUSEADDR, &val, sizeof(int));
-    if (err == -1) {
-        perror("Failed to set socket options");
-        return -1;
+    {
+        int flags = fcntl(master_sock, F_GETFL);
+        flags |= O_NONBLOCK;
+        err = fcntl(master_sock, F_SETFL, flags);
+        if (err == -1) {
+            perror("Failed to set socket control flags");
+            return -1;
+        }
+    }
+
+    {
+        bool val = true;
+        err = setsockopt(master_sock, SOL_SOCKET, SO_REUSEADDR, &val, sizeof(int));
+        if (err == -1) {
+            perror("Failed to set socket options");
+            return -1;
+        }
     }
 
     struct sockaddr_in server_addr;
     server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = INADDR_ANY;
+    server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
     server_addr.sin_port = htons(port);
 
-    err = bind(master_sock, (struct sockaddr*)&server_addr, sizeof(server_addr));
+    err = bind(master_sock, (struct sockaddr*) &server_addr, sizeof(server_addr));
     if (err == -1) {
         perror("Failed to bind socket");
         return -1;
     }
 
-    err = listen(master_sock, 1);
+    err = listen(master_sock, kMaxClients);
     if (err == -1) {
         perror("Failed to listen socket");
         return -1;
     }
 
-    struct sockaddr_in client_addr;
-    socklen_t client_len;
-    int client_sock = accept(master_sock, (struct sockaddr*)&client_addr, &client_len);
-    if (client_sock == -1) {
-        perror("Failed to accept connection");
-        return -1;
-    }
-    auto _close_client_socket = gsl::finally([&] { close(client_sock); });
+    while (true) {
+        printf("Waiting for new client..\n");
+        fflush(stdout);
 
-    printf("Server: got connection from %s port %d\n", inet_ntoa(client_addr.sin_addr),
-           ntohs(client_addr.sin_port));
+        struct sockaddr_in client_addr;
+        socklen_t client_len;
+        int client_sock =
+            accept(master_sock, (struct sockaddr*) &client_addr, &client_len);
+        if (client_sock == -1) {
+            if (errno == EWOULDBLOCK) {
+                sleep(1);
+                continue;
+            }
+            else {
+                perror("Failed to accept connection");
+                return -1;
+            }
+        }
+        auto _close_client_socket = gsl::finally([&] { close(client_sock); });
 
-    send(client_sock, "Hello from server", 17, 0);
+        printf("Server: got connection from %s port %d\n",
+               inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
 
-    char buffer[256] = { 0 };
-    int n = recv(client_sock, buffer, sizeof(buffer) - 1, 0);
-    if (n == -1) {
-        perror("Failed to read from client");
-        return -1;
-    } else if (n == 0) {
-        printf("Connection closed.\n");
-    } else {
-        buffer[n] = '\0';
-        printf("Received: '%s'\n", buffer);
+        int n = send(client_sock, "Hello from server", 17, 0);
+        if (n == -1) {
+            perror("Failed to send data to client");
+            return -1;
+        }
+
+        while (true) {
+            printf("Waiting client response..\n");
+            char buffer[256] = { 0 };
+            n = recv(client_sock, buffer, sizeof(buffer) - 1, 0);
+            if (n == -1) {
+                if (errno == EWOULDBLOCK) {
+                    sleep(1);
+                    continue;
+                }
+                else {
+                    perror("Failed to read data from client");
+                    return -1;
+                }
+            }
+            else if (n == 0) {
+                printf("Connection closed.\n");
+                break;
+            }
+            else {
+                buffer[n] = '\0';
+                printf("Received: '%s'\n", buffer);
+                break;
+            }
+        }
     }
 
     printf("Server finished\n");
