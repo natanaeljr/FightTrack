@@ -63,14 +63,42 @@ int client(const std::string server_address, uint16_t port)
         return -1;
     }
     else if (n == 0) {
-        printf("Server closed connection");
+        printf("Server closed connection\n");
     }
     else {
         buffer[n] = '\0';
         printf("Received '%s'\n", buffer);
     }
 
-    sleep(30);
+    {
+        n = read(sock, buffer, sizeof(buffer) - 1);
+        if (n == -1) {
+            perror("Failed to read from server");
+            return -1;
+        }
+        else if (n == 0) {
+            printf("Server closed connection\n");
+        }
+        else {
+            buffer[n] = '\0';
+            printf("Received '%s'\n", buffer);
+        }
+    }
+
+    {
+        n = read(sock, buffer, sizeof(buffer) - 1);
+        if (n == -1) {
+            perror("Failed to read from server");
+            return -1;
+        }
+        else if (n == 0) {
+            printf("Server closed connection\n");
+        }
+        else {
+            buffer[n] = '\0';
+            printf("Received '%s'\n", buffer);
+        }
+    }
 
     printf("Client finished\n");
     return 0;

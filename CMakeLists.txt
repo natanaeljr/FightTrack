@@ -28,6 +28,7 @@ add_library(fighttrack STATIC
 )
 target_link_libraries(fighttrack
     ncurses
+    pthread
 )
 if(FIGHTTRACK_DEPENDS)
     add_dependencies(fighttrack
@@ -47,8 +48,14 @@ target_link_libraries(${PROJECT_NAME}
 add_executable(server
     src/server.cc
 )
+target_link_libraries(server
+    pthread
+)
 
 # Client
 add_executable(client
     src/client.cc
+)
+target_link_libraries(client
+    pthread
 )
