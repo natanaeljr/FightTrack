@@ -16,17 +16,17 @@
 
 namespace fighttrack {
 
-class Server {
+class ServerSocket {
    public:
     /**
-     * \brief Construct a new Server object>
+     * \brief Construct a new Server object.
      */
-    Server();
+    ServerSocket();
 
     /**
      * \brief Destroy the Server object.
      */
-    ~Server() = default;
+    ~ServerSocket();
 
     /**
      * \brief Create and configure the server socket.

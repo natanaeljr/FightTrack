@@ -11,102 +11,159 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/poll.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
 
+#include <thread>
+#include <chrono>
 #include <gsl/gsl>
+
+using namespace std::chrono_literals;
 
 /**************************************************************************************/
 
 namespace fighttrack {
 
-int client(const std::string server_address, uint16_t port)
+ClientSocket::ClientSocket() : initialized_{ false }, socket_{ 0 }
 {
+}
+
+/**************************************************************************************/
+ClientSocket::~ClientSocket()
+{
+    if (initialized_)
+        Terminate();
+}
+
+/**************************************************************************************/
+int ClientSocket::Initialize(const std::string& server_addr, const uint16_t port)
+{
+    int ret = 0;
     int err = 0;
 
-    int sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (sock == -1) {
-        perror("Failed to create socket");
+    socket_ = socket(AF_INET, SOCK_STREAM, 0);
+    if (socket_ == -1) {
+        perror("Client: failed to create socket");
+        return ret = -1;
+    }
+    auto _close_socket = gsl::finally([&] {
+        if (ret != 0) {
+            close(socket_);
+        }
+    });
+
+    struct hostent* server_ent;
+    server_ent = gethostbyname(server_addr.data());
+    if (server_ent == nullptr) {
+        fprintf(stderr, "Client: failed to get host %s", server_addr.data());
         return -1;
     }
-    auto _close_socket = gsl::finally([&] { close(sock); });
 
-    struct hostent* server;
-    server = gethostbyname(server_address.data());
-    if (server == nullptr) {
-        fprintf(stderr, "Failed to get host %s", server_address.data());
-        return -1;
-    }
+    struct sockaddr_in server_sockaddr;
+    server_sockaddr.sin_family = AF_INET;
+    server_sockaddr.sin_port = htons(port);
 
-    struct sockaddr_in server_addr;
-    server_addr.sin_family = AF_INET;
-    bcopy((char*) server->h_addr, (char*) &server_addr.sin_addr.s_addr, server->h_length);
-    server_addr.sin_port = htons(port);
+    bcopy((char*)server_ent->h_addr, (char*)&server_sockaddr.sin_addr.s_addr, server_ent->h_length);
 
-    err = connect(sock, (struct sockaddr*) &server_addr, sizeof(server_addr));
+    err = connect(socket_, (struct sockaddr*)&server_sockaddr, sizeof(server_sockaddr));
     if (err == -1) {
-        perror("Failed to connect to server");
-        return -1;
+        perror("Client: failed to connect to server");
+        return ret = -1;
     }
 
-    int n = write(sock, "Hello from client", 17);
+    int n = write(socket_, "Hello from client", 17);
     if (n == -1) {
-        perror("Failed to write to server");
-        return -1;
+        perror("Client: failed to write to server");
+        return ret = -1;
     }
 
-    char buffer[256];
-    n = read(sock, buffer, sizeof(buffer) - 1);
-    if (n == -1) {
-        perror("Failed to read from server");
-        return -1;
-    }
-    else if (n == 0) {
-        printf("Server closed connection\n");
-    }
-    else {
+    initialized_ = true;
+    printf("Client: initialized\n");
+
+    return ret;
+}
+
+/**************************************************************************************/
+void ClientSocket::Terminate()
+{
+    if (!initialized_)
+        return;
+
+    close(socket_);
+
+    initialized_ = false;
+    printf("Client: terminated\n");
+}
+
+/**************************************************************************************/
+ClientSocket::RecvData ClientSocket::Receive()
+{
+    RecvData ret = { Status::SUCCESS, {} };
+
+    while (true) {
+        char buffer[2000];
+        int n = recv(socket_, buffer, sizeof(buffer) - 1, MSG_DONTWAIT);
+        if (n == -1) {
+            if (errno == EWOULDBLOCK) {
+                break;
+            }
+            perror("Client: failed to read data from socket");
+            ret.status = Status::ERROR;
+            break;
+        }
+        if (n == 0) {
+            printf("Client: server closed connection\n");
+            ret.status = Status::DISCONNECTED;
+            break;
+        }
+        /* There is data available */
         buffer[n] = '\0';
-        printf("Received '%s'\n", buffer);
+        printf("Client: received: %s\n", buffer);
+        ret.queue.emplace(std::string{ buffer, (size_t)n });
     }
 
-    {
-        n = read(sock, buffer, sizeof(buffer) - 1);
+    return ret;
+}
+
+/**************************************************************************************/
+ClientSocket::Status ClientSocket::Transmit(std::string data)
+{
+    Status ret = Status::SUCCESS;
+
+    size_t length = data.length();
+    while (length > 0) {
+        const char* buffer = data.c_str() + (data.length() - length);
+        int n = send(socket_, buffer, length, 0);
         if (n == -1) {
-            perror("Failed to read from server");
-            return -1;
+            perror("Client: failed to send data to server");
+            ret = Status::ERROR;
+            break;
         }
-        else if (n == 0) {
-            printf("Server closed connection\n");
+        if (n == 0) {
+            printf("Client: server closed connection\n");
+            ret = Status::DISCONNECTED;
+            break;
         }
-        else {
-            buffer[n] = '\0';
-            printf("Received '%s'\n", buffer);
-        }
+        length -= n;
     }
 
-    {
-        n = read(sock, buffer, sizeof(buffer) - 1);
-        if (n == -1) {
-            perror("Failed to read from server");
-            return -1;
-        }
-        else if (n == 0) {
-            printf("Server closed connection\n");
-        }
-        else {
-            buffer[n] = '\0';
-            printf("Received '%s'\n", buffer);
-        }
-    }
-
-    printf("Client finished\n");
-    return 0;
+    return ret;
 }
 
 } /* namespace fighttrack */
 
+/**************************************************************************************/
 int main()
 {
-    return fighttrack::client("127.0.0.1", 9124);
+    using fighttrack::ClientSocket;
+    ClientSocket client;
+    client.Initialize("127.0.0.1", 9124);
+
+    // std::this_thread::sleep_for(2s);
+    ClientSocket::RecvData recv_data = client.Receive();
+    ClientSocket::Status send_status = client.Transmit("Heart beat");
+
+    client.Terminate();
 }

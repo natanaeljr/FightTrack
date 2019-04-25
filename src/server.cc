@@ -26,7 +26,7 @@ using namespace std::chrono_literals;
 /**************************************************************************************/
 
 /** Helper function to transform an integer sequence into a initializer list */
-template<class T, T... I>
+template <class T, T... I>
 static constexpr auto make_initializer_list(std::integer_sequence<T, I...>)
 {
     return std::initializer_list<T>{ I... };
@@ -39,8 +39,7 @@ namespace fighttrack {
 static constexpr size_t kMaxClients = 4;
 
 /**************************************************************************************/
-
-Server::Server()
+ServerSocket::ServerSocket()
     : initialized_{ false },
       listen_sock_{ 0 },
       epoll_fd_{ 0 },
@@ -53,7 +52,15 @@ Server::Server()
 {
 }
 
-int Server::Initialize(uint16_t port)
+/**************************************************************************************/
+ServerSocket::~ServerSocket()
+{
+    if (initialized_)
+        Terminate();
+}
+
+/**************************************************************************************/
+int ServerSocket::Initialize(uint16_t port)
 {
     int ret = 0;
     int err = 0;
@@ -94,7 +101,7 @@ int Server::Initialize(uint16_t port)
     server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
     server_addr.sin_port = htons(port);
 
-    err = bind(listen_sock_, (struct sockaddr*) &server_addr, sizeof(server_addr));
+    err = bind(listen_sock_, (struct sockaddr*)&server_addr, sizeof(server_addr));
     if (err == -1) {
         perror("Failed to bind socket");
         return ret = -1;
@@ -149,18 +156,17 @@ int Server::Initialize(uint16_t port)
     /* Reset deque of client IDs */
     client_ids_ = make_initializer_list(std::make_integer_sequence<int, kMaxClients>{});
     /* Create event listener thread */
-    listener_thread_ = std::thread(&Server::EventHandler, this);
+    listener_thread_ = std::thread(&ServerSocket::EventHandler, this);
 
     /* Server socket initialized */
     initialized_ = true;
-    printf("Server: terminated\n");
+    printf("Server: initialized\n");
 
-    return ret = 0;
+    return ret;
 }
 
 /**************************************************************************************/
-
-void Server::Terminate()
+void ServerSocket::Terminate()
 {
     if (!initialized_)
         return;
@@ -174,12 +180,12 @@ void Server::Terminate()
     listener_thread_.join();
 
     /* Close sockets and file descriptors */
+    close(epoll_fd_);
     close(notify_fd_);
     for (auto& client : clients_) {
         close(client.second.sock);
     }
     close(listen_sock_);
-    close(epoll_fd_);
 
     /* Clear clients saved data */
     clients_.clear();
@@ -192,8 +198,7 @@ void Server::Terminate()
 }
 
 /**************************************************************************************/
-
-void Server::EventHandler()
+void ServerSocket::EventHandler()
 {
     int err = 0;
     constexpr size_t kMaxEvents = 10;
@@ -201,7 +206,7 @@ void Server::EventHandler()
 
     /* Listen for client events (new connections and incoming data) */
     while (true) {
-        printf("Server: Polling for events..\n");
+        printf("Server: polling for events..\n");
         fflush(stdout);
 
         /* Wait for an event from master socket or client sockets */
@@ -210,8 +215,7 @@ void Server::EventHandler()
         if (event_num == -1) {
             perror("Failed polling events");
             return;
-        }
-        else if (event_num == 0) {
+        } else if (event_num == 0) {
             printf("Server: epoll timeout\n");
             continue;
         }
@@ -223,8 +227,7 @@ void Server::EventHandler()
                 int n = read(notify_fd_, &notify, sizeof(notify));
                 if (n == -1) {
                     if (errno == EWOULDBLOCK) {
-                        printf(
-                            "Server: received unknown event on notify_fd, ignoring.\n");
+                        printf("Server: received unknown event on notify_fd, ignoring.\n");
                         continue;
                     }
                     perror("Failed to read thread notification code");
@@ -235,8 +238,7 @@ void Server::EventHandler()
                     printf("Server: request to terminate listener thread\n");
                     return;  // terminate
                 }
-                fprintf(stderr,
-                        "Unknown thread notification code received: %lu, ignoring.\n",
+                fprintf(stderr, "Unknown thread notification code received: %lu, ignoring.\n",
                         notify);
                 continue;
             }
@@ -259,8 +261,7 @@ void Server::EventHandler()
 }
 
 /**************************************************************************************/
-
-int Server::AddNewClient()
+int ServerSocket::AddNewClient()
 {
     int ret = 0;
     int err = 0;
@@ -280,7 +281,7 @@ int Server::AddNewClient()
     const int client_id = client_ids_.front();
     socklen_t client_len;
     ClientInfo client;
-    client.sock = accept(listen_sock_, (struct sockaddr*) &client.addr, &client_len);
+    client.sock = accept(listen_sock_, (struct sockaddr*)&client.addr, &client_len);
     if (client.sock == -1) {
         perror("Failed to accept a new connection");
         return ret = 2;
@@ -323,8 +324,8 @@ int Server::AddNewClient()
 
     /* Send Hello message */
     char buffer[100];
-    size_t len = snprintf(buffer, sizeof(buffer),
-                          "Hello from server, you are the client %d", client_id);
+    size_t len
+        = snprintf(buffer, sizeof(buffer), "Hello from server, you are the client %d", client_id);
     int n = send(client.sock, buffer, len, 0);
     if (n == -1) {
         perror("Failed to send data to client");
@@ -335,14 +336,12 @@ int Server::AddNewClient()
 }
 
 /**************************************************************************************/
-
-int Server::Transmit(ClientData client_data)
+int ServerSocket::Transmit(ClientData client_data)
 {
     std::lock_guard<std::mutex> lock{ mutex_ };
     auto client_it = clients_.find(client_data.id);
     if (client_it == clients_.end()) {
-        fprintf(stderr, "Failed to send data to client %d: client id not found\n",
-                client_data.id);
+        fprintf(stderr, "Failed to send data to client %d: client id not found\n", client_data.id);
         return -1;
     }
 
@@ -358,8 +357,7 @@ int Server::Transmit(ClientData client_data)
 }
 
 /**************************************************************************************/
-
-int Server::HandleClientInput(int client_sock)
+int ServerSocket::HandleClientInput(int client_sock)
 {
     int ret = 0;
 
@@ -416,8 +414,7 @@ int Server::HandleClientInput(int client_sock)
             buffer[n] = '\0';
             /* Saved it to received data queue */
             std::lock_guard<std::mutex> lock{ mutex_ };
-            rx_queue_.emplace(
-                ClientData{ .id = client_id, .buffer = { buffer, (size_t) n } });
+            rx_queue_.emplace(ClientData{ .id = client_id, .buffer = { buffer, (size_t)n } });
 
             printf("Server: received from client (%d): '%s'\n", client_id, buffer);
         }
@@ -427,8 +424,7 @@ int Server::HandleClientInput(int client_sock)
 }
 
 /**************************************************************************************/
-
-std::queue<Server::ClientData> Server::GetRxQueue()
+std::queue<ServerSocket::ClientData> ServerSocket::GetRxQueue()
 {
     std::lock_guard<std::mutex> lock{ mutex_ };
     // Return rx queued data and clear internal queue
@@ -439,9 +435,10 @@ std::queue<Server::ClientData> Server::GetRxQueue()
 
 } /* namespace fighttrack */
 
+/**************************************************************************************/
 int main()
 {
-    fighttrack::Server server;
+    fighttrack::ServerSocket server;
     server.Initialize(9124);
     std::this_thread::sleep_for(8s);
     server.Transmit({ .id = 0, .buffer = { "Bye bye client!" } });
