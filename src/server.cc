@@ -210,7 +210,7 @@ void ServerSocket::EventHandler()
         fflush(stdout);
 
         /* Wait for an event from master socket or client sockets */
-        constexpr int kTimeoutMs = std::chrono::milliseconds(10s).count();
+        constexpr int kTimeoutMs = std::chrono::milliseconds(30s).count();
         int event_num = epoll_wait(epoll_fd_, events, sizeof(events), kTimeoutMs);
         if (event_num == -1) {
             perror("Failed polling events");
@@ -338,6 +338,9 @@ int ServerSocket::AddNewClient()
 /**************************************************************************************/
 int ServerSocket::Transmit(ClientData client_data)
 {
+    if (client_data.buffer.size())
+        return -2;
+
     std::lock_guard<std::mutex> lock{ mutex_ };
     auto client_it = clients_.find(client_data.id);
     if (client_it == clients_.end()) {
@@ -350,6 +353,10 @@ int ServerSocket::Transmit(ClientData client_data)
     int n = send(client_sock, client_data.buffer.data(), client_data.buffer.length(), 0);
     if (n == -1) {
         perror("Failed to send data to client");
+        return -1;
+    }
+    if (n == 0) {
+        /* TODO: treat closed connection */
         return -1;
     }
 

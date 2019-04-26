@@ -161,9 +161,16 @@ int main()
     ClientSocket client;
     client.Initialize("127.0.0.1", 9124);
 
-    // std::this_thread::sleep_for(2s);
     ClientSocket::RecvData recv_data = client.Receive();
     ClientSocket::Status send_status = client.Transmit("Heart beat");
+
+    while (true) {
+        recv_data = client.Receive();
+        if (recv_data.status == ClientSocket::Status::SUCCESS)
+            std::this_thread::sleep_for(50ms);
+        else
+            break;
+    }
 
     client.Terminate();
 }
