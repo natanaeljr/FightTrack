@@ -8,15 +8,21 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Dependencies
 include(cmake/GSL.cmake)
+include(cmake/safelib.cmake)
 add_definitions(${GSL_DEFINITIONS})
+add_definitions(${SAFELIB_DEFINITIONS})
 
 if(DOWNLOAD_GSL)
     list(APPEND FIGHTTRACK_DEPENDS GSL)
+endif()
+if(DOWNLOAD_SAFELIB)
+    list(APPEND FIGHTTRACK_DEPENDS safelib)
 endif()
 
 # Headers
 include_directories(include)
 include_directories(${GSL_INCLUDE_DIRS})
+include_directories(${SAFELIB_INCLUDE_DIRS})
 
 # Library
 add_library(fighttrack STATIC
