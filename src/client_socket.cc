@@ -1,9 +1,9 @@
 /**
- * \file client.cc
- * \brief Client
+ * \file client_socket.cc
+ * \brief Client Socket implementation
  */
 
-#include "fighttrack/client.h"
+#include "fighttrack/client_socket.h"
 
 #include <cstdlib>
 #include <cstdio>
@@ -65,17 +65,12 @@ int ClientSocket::Initialize(const std::string& server_addr, const uint16_t port
     server_sockaddr.sin_family = AF_INET;
     server_sockaddr.sin_port = htons(port);
 
-    bcopy((char*)server_ent->h_addr, (char*)&server_sockaddr.sin_addr.s_addr, server_ent->h_length);
+    bcopy((char*) server_ent->h_addr, (char*) &server_sockaddr.sin_addr.s_addr,
+          server_ent->h_length);
 
-    err = connect(socket_, (struct sockaddr*)&server_sockaddr, sizeof(server_sockaddr));
+    err = connect(socket_, (struct sockaddr*) &server_sockaddr, sizeof(server_sockaddr));
     if (err == -1) {
         perror("Client: failed to connect to server");
-        return ret = -1;
-    }
-
-    int n = write(socket_, "Hello from client", 17);
-    if (n == -1) {
-        perror("Client: failed to write to server");
         return ret = -1;
     }
 
@@ -121,7 +116,7 @@ ClientSocket::RecvData ClientSocket::Receive()
         /* There is data available */
         buffer[n] = '\0';
         printf("Client: received: %s\n", buffer);
-        ret.queue.emplace(std::string{ buffer, (size_t)n });
+        ret.queue.emplace(std::string{ buffer, (size_t) n });
     }
 
     return ret;
@@ -141,11 +136,6 @@ ClientSocket::Status ClientSocket::Transmit(std::string data)
             ret = Status::ERROR;
             break;
         }
-        if (n == 0) {
-            printf("Client: server closed connection\n");
-            ret = Status::DISCONNECTED;
-            break;
-        }
         length -= n;
     }
 
@@ -153,24 +143,3 @@ ClientSocket::Status ClientSocket::Transmit(std::string data)
 }
 
 } /* namespace fighttrack */
-
-/**************************************************************************************/
-int main()
-{
-    using fighttrack::ClientSocket;
-    ClientSocket client;
-    client.Initialize("127.0.0.1", 9124);
-
-    ClientSocket::RecvData recv_data = client.Receive();
-    ClientSocket::Status send_status = client.Transmit("Heart beat");
-
-    while (true) {
-        recv_data = client.Receive();
-        if (recv_data.status == ClientSocket::Status::SUCCESS)
-            std::this_thread::sleep_for(50ms);
-        else
-            break;
-    }
-
-    client.Terminate();
-}

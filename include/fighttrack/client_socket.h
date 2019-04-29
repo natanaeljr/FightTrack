@@ -1,6 +1,6 @@
 /**
- * \file client.h
- * \brief Client
+ * \file client_socket.h
+ * \brief Client Socket API.
  */
 
 #include <cstdint>
