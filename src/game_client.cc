@@ -1,17 +1,19 @@
 /**
- * \file game.cc
- * \brief Game definition.
+ * \file game_client.cc
+ * \brief  Game Client.
  */
 
-#include "fighttrack/game.h"
+#include "fighttrack/game_client.h"
 
 #include <iostream>
 #include <chrono>
 #include <unistd.h>
-#include <linux/input-event-codes.h>
+#include <thread>
 
 #include <ncurses.h>
 #include <gsl/gsl>
+
+#include "fighttrack/ascii_art.h"
 
 /**************************************************************************************/
 
@@ -41,31 +43,34 @@ static const AsciiArt kMapArt{ {
 } };
 
 /**************************************************************************************/
-
-Game::Game() : player_{ "Main" }, map_{ kMapArt }, running_{ false }
+GameClient::GameClient(std::string player_name)
+    : running_{ false },
+      map_{ kMapArt },
+      player_{ player_name },
+      remote_players_{},
+      client_sock_{}
 {
 }
 
 /**************************************************************************************/
-
-Game::~Game()
+GameClient::~GameClient()
 {
 }
 
 /**************************************************************************************/
-
-int Game::Run(int argc, const char* argv[])
+int GameClient::Run(std::string server_addr, uint16_t port)
 {
-    /* No arguments for now */
-    std::ignore = argc;
-    std::ignore = argv;
-
-    printf("Launch FightTrack...\n");
+    printf("Launch GameClient...\n");
     fflush(stdout);
-    auto _exit_fighttrack = gsl::finally([] {
-        printf("Exit FightTrack...\n");
+    auto _exit_gameclient = gsl::finally([] {
+        printf("Exit GameClient...\n");
         fflush(stdout);
     });
+
+    if (client_sock_.Initialize(server_addr, port) != 0) {
+        fprintf(stderr, "Failed to initialize client socket!\n");
+        return -1;
+    }
 
     /* Set default locale */
     setlocale(LC_ALL, "");
@@ -73,7 +78,7 @@ int Game::Run(int argc, const char* argv[])
     /* Open a new tty for ncurses */
     FILE* tty = fopen("/dev/tty", "r+");
     if (tty == nullptr) {
-        fprintf(stderr, "Failed to open a tty!");
+        fprintf(stderr, "Failed to open a tty!\n");
         return -1;
     }
     auto _close_tty = gsl::finally([&] { fclose(tty); });
@@ -120,7 +125,7 @@ int Game::Run(int argc, const char* argv[])
 
 /**************************************************************************************/
 
-void Game::ConfigureTerminal(WINDOW* win)
+void GameClient::ConfigureTerminal(WINDOW* win)
 {
     /* Make cursor invisible */
     curs_set(0);
@@ -131,12 +136,12 @@ void Game::ConfigureTerminal(WINDOW* win)
     /* Enable capturing of F1, F2, arrow keys, etc */
     keypad(win, true);
     /* Set timeout for input reading */
-    wtimeout(win, 10);
+    wtimeout(win, 5);
 }
 
 /**************************************************************************************/
 
-int Game::Loop(WINDOW* win)
+int GameClient::Loop(WINDOW* win)
 {
     using namespace std::chrono_literals;
     auto now_ms = [] {
@@ -144,17 +149,17 @@ int Game::Loop(WINDOW* win)
             std::chrono::steady_clock::now());
     };
 
-    auto previous = now_ms();
-    std::chrono::milliseconds lag = 0ms;
-    constexpr auto kFramePerSec = 20;
-    constexpr auto kMsPerUpdate = std::chrono::milliseconds(1000 / kFramePerSec);
-
+    /* Get terminal size */
     int max_x = getmaxx(win) - 1;
     int max_y = getmaxy(win) - 1;
-
     /* Set player initial position */
     player_.SetPosX(1);
     player_.SetPosY(max_y - 3);
+
+    constexpr auto kFramePerSec = 20;
+    constexpr auto kMsPerUpdate = std::chrono::milliseconds(1000 / kFramePerSec);
+    auto previous = now_ms();
+    std::chrono::milliseconds lag = 0ms;
 
     while (running_) {
         auto current = now_ms();
@@ -163,10 +168,17 @@ int Game::Loop(WINDOW* win)
         ProcessInput(win);
 
         if (elapsed <= kMsPerUpdate) {
+            std::this_thread::sleep_for(kMsPerUpdate / 4);
             continue;
         }
 
         lag += elapsed;
+        {
+            int64_t times = (lag / kMsPerUpdate);
+            if (times > 1) {
+                printf("Running behind. Calling %lux Update() to keep up\n", times);
+            }
+        }
         while (lag >= kMsPerUpdate) {
             Update();
             lag -= kMsPerUpdate;
@@ -182,7 +194,7 @@ int Game::Loop(WINDOW* win)
 
 /**************************************************************************************/
 
-void Game::ProcessInput(WINDOW* win)
+void GameClient::ProcessInput(WINDOW* win)
 {
     int key = getch();
     if (key == -1) {
@@ -202,17 +214,15 @@ void Game::ProcessInput(WINDOW* win)
 
 /**************************************************************************************/
 
-void Game::Update()
+void GameClient::Update()
 {
-    printf("%s\n", __PRETTY_FUNCTION__);
     player_.Update();
 }
 
 /**************************************************************************************/
 
-void Game::Render(WINDOW* win)
+void GameClient::Render(WINDOW* win)
 {
-    printf("%s\n", __PRETTY_FUNCTION__);
     werase(win);
     box(win, 0, 0);
     map_.Draw(win);

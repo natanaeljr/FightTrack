@@ -24,7 +24,8 @@ void Map::Draw(WINDOW* win)
 
 bool Map::IsGround(int x, int y)
 {
-    return art_.GetChar(x, y) == '▓';
+    // return art_.GetChar(x, y) == '▓';
+    return art_.GetChar(x, y) == ' ';
 }
 
 } /* namespace fighttrack */

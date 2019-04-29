@@ -26,20 +26,21 @@ include_directories(${SAFELIB_INCLUDE_DIRS})
 
 # Library
 add_library(fighttrack STATIC
-    src/game.cc
+    src/fighttrack.cc
     src/player.cc
     src/player_states.cc
     src/ascii_art.cc
     src/map.cc
+    src/server_socket.cc
+    src/client_socket.cc
+    src/game_client.cc
 )
 target_link_libraries(fighttrack
     ncurses
     pthread
 )
 if(FIGHTTRACK_DEPENDS)
-    add_dependencies(fighttrack
-        ${FIGHTTRACK_DEPENDS}
-    )
+    add_dependencies(fighttrack ${FIGHTTRACK_DEPENDS})
 endif()
 
 # Executable
@@ -48,20 +49,4 @@ add_executable(${PROJECT_NAME}
 )
 target_link_libraries(${PROJECT_NAME}
     fighttrack
-)
-
-# Server
-add_executable(server
-    src/server.cc
-)
-target_link_libraries(server
-    pthread
-)
-
-# Client
-add_executable(client
-    src/client.cc
-)
-target_link_libraries(client
-    pthread
 )

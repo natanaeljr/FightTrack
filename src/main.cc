@@ -2,11 +2,11 @@
  * \file   main.cc
  * \brief  Main file.
  */
-#include "fighttrack/game.h"
+#include "fighttrack/fighttrack.h"
 
 int main(int argc, const char* argv[])
 {
-    fighttrack::Game game;
+    fighttrack::FightTrack game;
     int ret = game.Run(argc, argv);
     return ret;
 }
