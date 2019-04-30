@@ -3,6 +3,8 @@
  * \brief Player States declaration.
  */
 
+#pragma once
+
 #include <ncurses.h>
 #include <gsl/gsl>
 

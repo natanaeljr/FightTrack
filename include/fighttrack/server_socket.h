@@ -3,6 +3,8 @@
  * \brief Server Socket API.
  */
 
+#pragma once
+
 #include <cstdint>
 #include <map>
 #include <deque>

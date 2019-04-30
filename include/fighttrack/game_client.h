@@ -3,6 +3,8 @@
  * \brief Game Client.
  */
 
+#pragma once
+
 #include <vector>
 #include <cstdint>
 #include <ncurses.h>

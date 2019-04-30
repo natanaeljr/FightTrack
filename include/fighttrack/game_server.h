@@ -3,6 +3,8 @@
  * \brief Game Server.
  */
 
+#pragma once
+
 #include <vector>
 
 #include "fighttrack/server_socket.h"

@@ -3,6 +3,8 @@
  * \brief FightTrack class.
  */
 
+#pragma once
+
 /**************************************************************************************/
 
 namespace fighttrack {

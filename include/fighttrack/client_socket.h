@@ -3,6 +3,8 @@
  * \brief Client Socket API.
  */
 
+#pragma once
+
 #include <cstdint>
 #include <string>
 #include <queue>

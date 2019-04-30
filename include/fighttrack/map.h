@@ -3,6 +3,8 @@
  * \brief Map declearation.
  */
 
+#pragma once
+
 #include "fighttrack/ascii_art.h"
 
 /**************************************************************************************/

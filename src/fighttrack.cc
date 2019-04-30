@@ -10,6 +10,7 @@
 #include <string>
 
 #include "fighttrack/game_client.h"
+#include "fighttrack/game_server.h"
 
 /**************************************************************************************/
 
@@ -25,12 +26,12 @@ int FightTrack::Run(int argc, const char* argv[])
     }
 
     if (strcmp(argv[1], "server") == 0) {
-        int port = std::stoi(argv[3]);
+        int port = std::stoi(argv[2]);
         if (port < 0 || port > UINT16_MAX) {
             fprintf(stderr, "Invalid port number!\n");
             return -1;
         }
-        // return GameServer().Run(port);
+        return GameServer().Run(port);
     }
     else if (strcmp(argv[1], "client") == 0) {
         int port;

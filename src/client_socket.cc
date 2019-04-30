@@ -65,10 +65,9 @@ int ClientSocket::Initialize(const std::string& server_addr, const uint16_t port
     server_sockaddr.sin_family = AF_INET;
     server_sockaddr.sin_port = htons(port);
 
-    bcopy((char*) server_ent->h_addr, (char*) &server_sockaddr.sin_addr.s_addr,
-          server_ent->h_length);
+    bcopy((char*)server_ent->h_addr, (char*)&server_sockaddr.sin_addr.s_addr, server_ent->h_length);
 
-    err = connect(socket_, (struct sockaddr*) &server_sockaddr, sizeof(server_sockaddr));
+    err = connect(socket_, (struct sockaddr*)&server_sockaddr, sizeof(server_sockaddr));
     if (err == -1) {
         perror("Client: failed to connect to server");
         return ret = -1;
@@ -115,8 +114,8 @@ ClientSocket::RecvData ClientSocket::Receive()
         }
         /* There is data available */
         buffer[n] = '\0';
-        printf("Client: received: %s\n", buffer);
-        ret.queue.emplace(std::string{ buffer, (size_t) n });
+        printf("Client: received %d bytes from server\n", n);
+        ret.queue.emplace(std::string{ buffer, (size_t)n });
     }
 
     return ret;

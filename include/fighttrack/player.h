@@ -3,6 +3,8 @@
  * \brief Player class.
  */
 
+#pragma once
+
 #include <string>
 #include <ncurses.h>
 #include <gsl/gsl>
@@ -26,6 +28,11 @@ class Player {
      * \brief Destroy the Player object.
      */
     ~Player();
+
+    const std::string& GetName()
+    {
+        return name_;
+    }
 
     /**
      * \brief  Process input from user.
@@ -54,21 +61,36 @@ class Player {
      * \brief Set the Player Graphics.
      * \param art ASCII Art.
      */
-    void SetGraphics(AsciiArt art) { art_ = art; }
+    void SetGraphics(AsciiArt art)
+    {
+        art_ = art;
+    }
 
     /**
      * \brief Get player position.
      * \return Position.
      */
-    int GetPosX() { return pos_x_; }
-    int GetPosY() { return pos_y_; }
+    int GetPosX()
+    {
+        return pos_x_;
+    }
+    int GetPosY()
+    {
+        return pos_y_;
+    }
 
     /**
      * \brief Set player position.
      * \param pos Position.
      */
-    void SetPosX(int pos_x) { pos_x_ = pos_x; }
-    void SetPosY(int pos_y) { pos_y_ = pos_y; }
+    void SetPosX(int pos_x)
+    {
+        pos_x_ = pos_x;
+    }
+    void SetPosY(int pos_y)
+    {
+        pos_y_ = pos_y;
+    }
 
     /**
      * \brief Start jump animation
@@ -86,7 +108,7 @@ class Player {
     int heart_;           //!< Player's current life value (range 0~100)
     AsciiArt art_;        //!< Player's current graphics
     int pos_x_, pos_y_;   //!< Player's current position
-    int jump_ticks_ = 0;       //!< Current number of ticks jumping
+    int jump_ticks_ = 0;  //!< Current number of ticks jumping
 };
 
 } /* namespace fighttrack */

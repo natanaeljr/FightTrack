@@ -34,6 +34,7 @@ add_library(fighttrack STATIC
     src/server_socket.cc
     src/client_socket.cc
     src/game_client.cc
+    src/game_server.cc
 )
 target_link_libraries(fighttrack
     ncurses

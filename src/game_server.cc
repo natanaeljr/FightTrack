@@ -82,6 +82,26 @@ int GameServer::Loop()
         auto elapsed = current - previous;
 
         std::queue<ServerSocket::RxMessage> rx_msgs = server_sock_.GetMessages();
+        while (!rx_msgs.empty()) {
+            auto& msg = rx_msgs.front();
+            switch (msg.status) {
+                case ServerSocket::RxStatus::CONNECTED:
+                    printf("New client connected: %d\n", msg.client_id);
+                    break;
+                case ServerSocket::RxStatus::DISCONNECTED: {
+                    printf("Client %d disconnected\n", msg.client_id);
+                    break;
+                }
+                case ServerSocket::RxStatus::NEW_DATA:
+                    printf("Client %d sent: '%s'\n", msg.client_id, msg.buffer.c_str());
+                    server_sock_.Transmit({
+                        .client_ids = { msg.client_id },
+                        .buffer = "Hello client " + std::to_string(msg.client_id),
+                    });
+                    break;
+            }
+            rx_msgs.pop();
+        }
 
         if (elapsed <= kMsPerUpdate) {
             std::this_thread::sleep_for(kMsPerUpdate / 4);
@@ -92,7 +112,7 @@ int GameServer::Loop()
         {
             int64_t times = (lag / kMsPerUpdate);
             if (times > 1) {
-                printf("Running behind. Calling %lux Update() to keep up\n", times);
+                // printf("Running behind. Calling %lux Update() to keep up\n", times);
             }
         }
         while (lag >= kMsPerUpdate) {
@@ -106,6 +126,11 @@ int GameServer::Loop()
     }
 
     return 0;
+}
+
+/**************************************************************************************/
+void GameServer::Update()
+{
 }
 
 }  // namespace fighttrack
