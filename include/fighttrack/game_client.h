@@ -54,6 +54,19 @@ class GameClient {
     void ProcessInput(WINDOW* win);
 
     /**
+     * \brief Process messages received in Client Socket.
+     * \return 0 on sucess, negative on error.
+     */
+    int ProcessNetworkInput();
+
+    /**
+     * \brief Process data packets received from server.
+     * \param packet    Data packet / message.
+     * \return 0 on sucess, negative on error.
+     */
+    int ProcessPacket(const std::string& packet);
+
+    /**
      * \brief Update all objects.
      */
     void Update();

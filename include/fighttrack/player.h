@@ -97,11 +97,13 @@ class Player {
     Player& SetPosX(int pos_x)
     {
         pos_x_ = pos_x;
+        dirty_ = true;
         return *this;
     }
     Player& SetPosY(int pos_y)
     {
         pos_y_ = pos_y;
+        dirty_ = true;
         return *this;
     }
 
@@ -115,6 +117,16 @@ class Player {
      */
     bool IsJumping() const;
 
+    /**
+     * \brief  Check if player is has been modified
+     */
+    bool Dirty()
+    {
+        auto ret = dirty_;
+        dirty_ = false;
+        return ret;
+    }
+
    private:
     std::string name_;    //!< Player name
     PlayerState* state_;  //!< Player's current state
@@ -122,6 +134,7 @@ class Player {
     AsciiArt art_;        //!< Player's current graphics
     int pos_x_, pos_y_;   //!< Player's current position
     int jump_ticks_ = 0;  //!< Current number of ticks jumping
+    bool dirty_;          //!< Flag indicating modification
 };
 
 } /* namespace fighttrack */

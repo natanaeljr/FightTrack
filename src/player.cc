@@ -16,7 +16,9 @@ Player::Player(std::string name)
       heart_{ 100 },
       art_{ {} },
       pos_x_{ 0 },
-      pos_y_{ 0 }
+      pos_y_{ 0 },
+      jump_ticks_{ 0 },
+      dirty_{ false }
 {
 }
 
@@ -81,6 +83,7 @@ Player& Player::StartJump()
     if (!IsJumping())
         jump_ticks_ = 6;
 
+    dirty_ = true;
     return *this;
 }
 

@@ -72,7 +72,7 @@ int GameServer::Loop()
             std::chrono::steady_clock::now());
     };
 
-    constexpr auto kFramePerSec = 20;
+    constexpr auto kFramePerSec = 4;
     constexpr auto kMsPerUpdate = std::chrono::milliseconds(1000 / kFramePerSec);
     auto previous = now_ms();
     std::chrono::milliseconds lag = 0ms;
@@ -96,7 +96,6 @@ int GameServer::Loop()
             int64_t times = (lag / kMsPerUpdate);
             if (times > 1) {
                 // printf("Running behind. Calling %lux Update() to keep up\n", times);
-                Update();
             }
         }
         while (lag >= kMsPerUpdate) {
@@ -104,7 +103,10 @@ int GameServer::Loop()
             lag -= kMsPerUpdate;
         }
 
-        // Send new data
+        if (TransmitUpdates() != 0) {
+            fprintf(stderr, "Game: failed to transmit game updates to clients\n");
+            return -1;
+        }
 
         previous = current;
     }
@@ -131,7 +133,7 @@ int GameServer::ProcessNetworkInput()
         switch (msg.status) {
             case ServerSocket::RxStatus::CONNECTED: {
                 printf("Game: new client connected: %d\n", msg.client_id);
-                players_[msg.client_id];
+                players_[msg.client_id].SetPosX(2).SetPosY(18);
                 break;
             }
             case ServerSocket::RxStatus::DISCONNECTED: {
@@ -170,6 +172,7 @@ int GameServer::ProcessNetworkInput()
 int GameServer::ProcessPacket(int client_id, const std::string& packet)
 {
     constexpr char kPlayerNameTag = '1';
+    constexpr char kPlayerKeyPressTag = '2';
 
     size_t pos = 0;
     while (pos < packet.length()) {
@@ -188,6 +191,15 @@ int GameServer::ProcessPacket(int client_id, const std::string& packet)
                 auto& player = players_[client_id];
                 player.SetName(std::string{ &data[2], len });
                 printf("Game: player '%s' is online\n", player.GetName().c_str());
+                // player.SetPosX(1).SetPosY(18);
+                break;
+            }
+            case kPlayerKeyPressTag: {
+                auto& player = players_[client_id];
+                int key;
+                sscanf(&data[2], "%d", &key);
+                printf("Game: client %d press key %d\n", client_id, key);
+                player.HandleInput(key);
                 break;
             }
             default:
@@ -196,6 +208,30 @@ int GameServer::ProcessPacket(int client_id, const std::string& packet)
         }
 
         pos = len + 1;
+    }
+
+    return 0;
+}
+
+int GameServer::TransmitUpdates()
+{
+    constexpr char kPlayerPositionTag = '3';
+
+    for (auto player_it : players_) {
+        auto& player = player_it.second;
+        bool dirty = player.Dirty();
+        printf("player %s is dirty? %d\n", player.GetName().c_str(), dirty);
+        if (dirty) {
+            std::string buffer = { kPlayerPositionTag + std::string(":") +
+                                   std::to_string(player.GetPosX()) + ',' +
+                                   std::to_string(player.GetPosY()) + "\n" };
+            server_sock_.Transmit({
+                .client_ids = { player_it.first },
+                .buffer = buffer,
+            });
+            printf("Transmitted '%s' to player '%s'\n", buffer.c_str(),
+                   player.GetName().c_str());
+        }
     }
 
     return 0;

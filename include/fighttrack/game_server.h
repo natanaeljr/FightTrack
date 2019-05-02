@@ -58,6 +58,12 @@ class GameServer {
      */
     int ProcessPacket(int client_id, const std::string& packet);
 
+    /**
+     * \brief  Transmit updates to client players.
+     * \return 0 on sucess, negative on error.
+     */
+    int TransmitUpdates();
+
    private:
     //! Game loop running flag
     bool running_;

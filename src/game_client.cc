@@ -156,14 +156,14 @@ int GameClient::Loop(WINDOW* win)
     player_.SetPosX(1);
     player_.SetPosY(max_y - 3);
 
-    constexpr auto kFramePerSec = 20;
+    constexpr auto kFramePerSec = 4;
     constexpr auto kMsPerUpdate = std::chrono::milliseconds(1000 / kFramePerSec);
     auto previous = now_ms();
     std::chrono::milliseconds lag = 0ms;
 
-    if (client_sock_.Transmit("1:" + player_.GetName()) !=
+    if (client_sock_.Transmit("1:" + player_.GetName() + "\n") !=
         ClientSocket::Status::SUCCESS) {
-        fprintf(stderr, "Failed to send username to server\n");
+        fprintf(stderr, "Failed to send player name to server\n");
         return -1;
     }
 
@@ -178,21 +178,9 @@ int GameClient::Loop(WINDOW* win)
             continue;
         }
 
-        ClientSocket::RecvData recv_data = client_sock_.Receive();
-        switch (recv_data.status) {
-            case ClientSocket::Status::DISCONNECTED:
-                printf("Disconnected from server\n");
-                break;
-            case ClientSocket::Status::ERROR:
-                printf("Error reading from client socket\n");
-                break;
-            case ClientSocket::Status::SUCCESS:
-                while (!recv_data.queue.empty()) {
-                    auto& msg = recv_data.queue.front();
-                    printf("Server sent: '%s'\n", msg.c_str());
-                    recv_data.queue.pop();
-                }
-                break;
+        if (ProcessNetworkInput() != 0) {
+            fprintf(stderr, "Game: error processing network input\n");
+            return -1;
         }
 
         lag += elapsed;
@@ -232,18 +220,81 @@ void GameClient::ProcessInput(WINDOW* win)
         }
     }
 
-    player_.HandleInput(key);
+    printf("Game: sending key %d to server\n", key);
+    client_sock_.Transmit("2:" + std::to_string(key) + "\n");
 }
 
 /**************************************************************************************/
+int GameClient::ProcessNetworkInput()
+{
+    ClientSocket::RecvData recv_data = client_sock_.Receive();
+    switch (recv_data.status) {
+        case ClientSocket::Status::DISCONNECTED:
+            printf("Disconnected from server\n");
+            running_ = false;
+            break;
+        case ClientSocket::Status::ERROR:
+            printf("Error reading from client socket\n");
+            return -1;
+        case ClientSocket::Status::SUCCESS:
+            while (!recv_data.queue.empty()) {
+                auto& msg = recv_data.queue.front();
+                printf("Server sent: '%s'\n", msg.c_str());
+                if (ProcessPacket(recv_data.queue.front()) != 0) {
+                    fprintf(stderr, "Game: failed to process server message\n");
+                    return -1;
+                }
+                recv_data.queue.pop();
+            }
+            break;
+    }
 
+    return 0;
+}
+
+/**************************************************************************************/
+int GameClient::ProcessPacket(const std::string& packet)
+{
+    constexpr char kPlayerPositionTag = '3';
+
+    size_t pos = 0;
+    while (pos < packet.length()) {
+        size_t len = packet.find_first_of('\n', pos);
+        len = (len == std::string::npos) ? packet.length() : len;
+        const std::string data{ &packet[pos], len };
+
+        if (data[1] != ':') {
+            fprintf(stderr, "Game: network message format not matched: (%s)\n",
+                    data.c_str());
+        }
+
+        switch (data[0]) {
+            case kPlayerPositionTag: {
+                int x, y;
+                sscanf(&data[2], "%d,%d", &x, &y);
+                player_.SetPosX(x).SetPosY(y);
+                printf("Game: received new player position %dx%d\n", player_.GetPosX(),
+                       player_.GetPosY());
+                break;
+            }
+            default:
+                fprintf(stderr, "Game: unknown message from server: (%s)\n",
+                        data.c_str());
+        }
+
+        pos = len + 1;
+    }
+
+    return 0;
+}
+
+/**************************************************************************************/
 void GameClient::Update()
 {
     player_.Update();
 }
 
 /**************************************************************************************/
-
 void GameClient::Render(WINDOW* win)
 {
     werase(win);
