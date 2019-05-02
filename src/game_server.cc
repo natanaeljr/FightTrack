@@ -81,31 +81,14 @@ int GameServer::Loop()
         auto current = now_ms();
         auto elapsed = current - previous;
 
-        std::queue<ServerSocket::RxMessage> rx_msgs = server_sock_.GetMessages();
-        while (!rx_msgs.empty()) {
-            auto& msg = rx_msgs.front();
-            switch (msg.status) {
-                case ServerSocket::RxStatus::CONNECTED:
-                    printf("New client connected: %d\n", msg.client_id);
-                    break;
-                case ServerSocket::RxStatus::DISCONNECTED: {
-                    printf("Client %d disconnected\n", msg.client_id);
-                    break;
-                }
-                case ServerSocket::RxStatus::NEW_DATA:
-                    printf("Client %d sent: '%s'\n", msg.client_id, msg.buffer.c_str());
-                    server_sock_.Transmit({
-                        .client_ids = { msg.client_id },
-                        .buffer = "Hello client " + std::to_string(msg.client_id),
-                    });
-                    break;
-            }
-            rx_msgs.pop();
-        }
-
         if (elapsed <= kMsPerUpdate) {
             std::this_thread::sleep_for(kMsPerUpdate / 4);
             continue;
+        }
+
+        if (ProcessNetworkInput() != 0) {
+            fprintf(stderr, "Game: error processing network input\n");
+            return -1;
         }
 
         lag += elapsed;
@@ -113,6 +96,7 @@ int GameServer::Loop()
             int64_t times = (lag / kMsPerUpdate);
             if (times > 1) {
                 // printf("Running behind. Calling %lux Update() to keep up\n", times);
+                Update();
             }
         }
         while (lag >= kMsPerUpdate) {
@@ -131,6 +115,90 @@ int GameServer::Loop()
 /**************************************************************************************/
 void GameServer::Update()
 {
+    for (auto player_it : players_) {
+        auto& player = player_it.second;
+        player.Update();
+    }
+}
+
+/**************************************************************************************/
+int GameServer::ProcessNetworkInput()
+{
+    std::queue<ServerSocket::RxMessage> rx_msgs = server_sock_.GetMessages();
+
+    while (!rx_msgs.empty()) {
+        auto& msg = rx_msgs.front();
+        switch (msg.status) {
+            case ServerSocket::RxStatus::CONNECTED: {
+                printf("Game: new client connected: %d\n", msg.client_id);
+                players_[msg.client_id];
+                break;
+            }
+            case ServerSocket::RxStatus::DISCONNECTED: {
+                auto player_it = players_.find(msg.client_id);
+                if (player_it == players_.end()) {
+                    fprintf(
+                        stderr,
+                        "Game: something went wrong. Can't remove unknown client %d\n",
+                        msg.client_id);
+                    return -1;
+                }
+                printf("Game: erasing player '%s'\n",
+                       player_it->second.GetName().c_str());
+                players_.erase(player_it);
+
+                printf("Game: client %d disconnected\n", msg.client_id);
+                break;
+            }
+            case ServerSocket::RxStatus::NEW_DATA: {
+                printf("Game: client %d sent: '%s'\n", msg.client_id, msg.buffer.c_str());
+                if (ProcessPacket(msg.client_id, msg.buffer) != 0) {
+                    fprintf(stderr, "Game: failed to process message from client %d\n",
+                            msg.client_id);
+                    return -1;
+                }
+                break;
+            }
+        }
+        rx_msgs.pop();
+    }
+
+    return 0;
+}
+
+/**************************************************************************************/
+int GameServer::ProcessPacket(int client_id, const std::string& packet)
+{
+    constexpr char kPlayerNameTag = '1';
+
+    size_t pos = 0;
+    while (pos < packet.length()) {
+        size_t len = packet.find_first_of('\n', pos);
+        len = (len == std::string::npos) ? packet.length() : len;
+        const std::string data{ &packet[pos], len };
+
+        if (data[1] != ':') {
+            fprintf(stderr,
+                    "Game: network message format not matched from client %d: (%s)\n",
+                    client_id, data.c_str());
+        }
+
+        switch (data[0]) {
+            case kPlayerNameTag: {
+                auto& player = players_[client_id];
+                player.SetName(std::string{ &data[2], len });
+                printf("Game: player '%s' is online\n", player.GetName().c_str());
+                break;
+            }
+            default:
+                fprintf(stderr, "Game: unknown message from client %d: (%s)\n", client_id,
+                        data.c_str());
+        }
+
+        pos = len + 1;
+    }
+
+    return 0;
 }
 
 }  // namespace fighttrack

@@ -44,7 +44,11 @@ static const AsciiArt kMapArt{ {
 
 /**************************************************************************************/
 GameClient::GameClient(std::string player_name)
-    : running_{ false }, map_{ kMapArt }, player_{ player_name }, remote_players_{}, client_sock_{}
+    : running_{ false },
+      map_{ kMapArt },
+      player_{ player_name },
+      remote_players_{},
+      client_sock_{}
 {
 }
 
@@ -97,8 +101,8 @@ int GameClient::Run(std::string server_addr, uint16_t port)
     constexpr int kMinLines = 24;
     constexpr int kMinCols = 80;
     if (LINES < kMinLines || COLS < kMinCols) {
-        fprintf(stderr, "Terminal size must be at least %dx%d. Current size is %dx%d\n", kMinLines,
-                kMinCols, LINES, COLS);
+        fprintf(stderr, "Terminal size must be at least %dx%d. Current size is %dx%d\n",
+                kMinLines, kMinCols, LINES, COLS);
         return -2;
     }
     printf("Terminal window size is %dx%d\n", LINES, COLS);
@@ -106,8 +110,8 @@ int GameClient::Run(std::string server_addr, uint16_t port)
     ConfigureTerminal(stdscr);
 
     /* Create Game window */
-    WINDOW* game_window
-        = newwin(kMinLines - 2, kMinCols - 2, (LINES - kMinLines) / 2, (COLS - kMinCols) / 2);
+    WINDOW* game_window = newwin(kMinLines - 2, kMinCols - 2, (LINES - kMinLines) / 2,
+                                 (COLS - kMinCols) / 2);
     if (game_window == nullptr) {
         fprintf(stderr, "Failed to create the game window\n");
         return -1;
@@ -157,7 +161,8 @@ int GameClient::Loop(WINDOW* win)
     auto previous = now_ms();
     std::chrono::milliseconds lag = 0ms;
 
-    if (client_sock_.Transmit("username:" + player_.GetName()) != ClientSocket::Status::SUCCESS) {
+    if (client_sock_.Transmit("1:" + player_.GetName()) !=
+        ClientSocket::Status::SUCCESS) {
         fprintf(stderr, "Failed to send username to server\n");
         return -1;
     }
@@ -219,7 +224,7 @@ void GameClient::ProcessInput(WINDOW* win)
         return;
     }
 
-    printf("Key pressed: %d\n", key);
+    // printf("Key pressed: %d\n", key);
     switch (key) {
         case 27 /* ESC */: {
             running_ = false;

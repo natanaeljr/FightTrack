@@ -22,6 +22,12 @@ class Player {
     /**
      * \brief Construct a new Player object.
      */
+    Player() : Player("") {}
+
+    /**
+     * \brief Construct a new Player object.
+     * \param name Player's name.
+     */
     Player(std::string name);
 
     /**
@@ -29,10 +35,20 @@ class Player {
      */
     ~Player();
 
-    const std::string& GetName()
+    /**
+     * \brief Set player's name.
+     * \param name Name.
+     */
+    Player& SetName(std::string name)
     {
-        return name_;
+        name_ = name;
+        return *this;
     }
+
+    /**
+     * \brief Get player's name.
+     */
+    const std::string& GetName() const { return name_; }
 
     /**
      * \brief  Process input from user.
@@ -55,52 +71,49 @@ class Player {
      * \brief Damage the player
      * \param value Value to damage (range 1~100)
      */
-    void Damage(int value);
+    Player& Damage(int value);
 
     /**
      * \brief Set the Player Graphics.
      * \param art ASCII Art.
      */
-    void SetGraphics(AsciiArt art)
+    Player& SetGraphics(AsciiArt art)
     {
         art_ = art;
+        return *this;
     }
 
     /**
      * \brief Get player position.
      * \return Position.
      */
-    int GetPosX()
-    {
-        return pos_x_;
-    }
-    int GetPosY()
-    {
-        return pos_y_;
-    }
+    int GetPosX() const { return pos_x_; }
+    int GetPosY() const { return pos_y_; }
 
     /**
      * \brief Set player position.
      * \param pos Position.
      */
-    void SetPosX(int pos_x)
+    Player& SetPosX(int pos_x)
     {
         pos_x_ = pos_x;
+        return *this;
     }
-    void SetPosY(int pos_y)
+    Player& SetPosY(int pos_y)
     {
         pos_y_ = pos_y;
+        return *this;
     }
 
     /**
      * \brief Start jump animation
      */
-    void StartJump();
+    Player& StartJump();
 
     /**
      * \brief  Check if player is currently jumping
      */
-    bool IsJumping();
+    bool IsJumping() const;
 
    private:
     std::string name_;    //!< Player name

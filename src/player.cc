@@ -61,28 +61,32 @@ void Player::Draw(WINDOW* win)
 
 /**************************************************************************************/
 
-void Player::Damage(int value)
+Player& Player::Damage(int value)
 {
     if (value < 1 || value > 100) {
         fprintf(stderr, "Player: Invalid damage value requested: %d", value);
-        return;
+        return *this;
     }
 
     heart_ -= value;
     heart_ = heart_ < 0 ? 0 : heart_;
+
+    return *this;
 }
 
 /**************************************************************************************/
 
-void Player::StartJump()
+Player& Player::StartJump()
 {
     if (!IsJumping())
         jump_ticks_ = 6;
+
+    return *this;
 }
 
 /**************************************************************************************/
 
-bool Player::IsJumping()
+bool Player::IsJumping() const
 {
     return jump_ticks_ > 0;
 }

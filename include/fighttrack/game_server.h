@@ -6,6 +6,7 @@
 #pragma once
 
 #include <vector>
+#include <map>
 
 #include "fighttrack/server_socket.h"
 #include "fighttrack/player.h"
@@ -43,13 +44,27 @@ class GameServer {
      */
     void Update();
 
+    /**
+     * \brief Process messages received in Server Socket.
+     * \return 0 on sucess, negative on error.
+     */
+    int ProcessNetworkInput();
+
+    /**
+     * \brief Process data packets received from client players.
+     * \param client_id Client ID.
+     * \param packet    Data packet / message.
+     * \return 0 on sucess, negative on error.
+     */
+    int ProcessPacket(int client_id, const std::string& packet);
+
    private:
     //! Game loop running flag
     bool running_;
-    /* List of connected players */
-    std::vector<Player> players_;
     //! World map
     Map map_;
+    //! Map of connected players; key: client ID; element: Player object
+    std::map<int, Player> players_;
     //! High-level server socket API
     ServerSocket server_sock_;
 };
