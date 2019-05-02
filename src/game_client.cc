@@ -156,7 +156,7 @@ int GameClient::Loop(WINDOW* win)
     player_.SetPosX(1);
     player_.SetPosY(max_y - 3);
 
-    constexpr auto kFramePerSec = 4;
+    constexpr auto kFramePerSec = 20;
     constexpr auto kMsPerUpdate = std::chrono::milliseconds(1000 / kFramePerSec);
     auto previous = now_ms();
     std::chrono::milliseconds lag = 0ms;

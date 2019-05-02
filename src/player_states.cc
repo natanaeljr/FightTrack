@@ -72,7 +72,6 @@ void PlayerState::Walking::Update(Player& player)
     threshold_++;
     if (threshold_ >= 2) {
         player.SetPosX(player.GetPosX() + static_cast<int>(direction_));
-        printf("player pos walked to %dx%d\n", player.GetPosX(), player.GetPosY());
         threshold_ = 0;
     }
 }

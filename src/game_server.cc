@@ -72,7 +72,7 @@ int GameServer::Loop()
             std::chrono::steady_clock::now());
     };
 
-    constexpr auto kFramePerSec = 4;
+    constexpr auto kFramePerSec = 20;
     constexpr auto kMsPerUpdate = std::chrono::milliseconds(1000 / kFramePerSec);
     auto previous = now_ms();
     std::chrono::milliseconds lag = 0ms;
@@ -117,7 +117,7 @@ int GameServer::Loop()
 /**************************************************************************************/
 void GameServer::Update()
 {
-    for (auto player_it : players_) {
+    for (auto& player_it : players_) {
         auto& player = player_it.second;
         player.Update();
     }
@@ -217,7 +217,7 @@ int GameServer::TransmitUpdates()
 {
     constexpr char kPlayerPositionTag = '3';
 
-    for (auto player_it : players_) {
+    for (auto& player_it : players_) {
         auto& player = player_it.second;
         bool dirty = player.Dirty();
         printf("player %s is dirty? %d\n", player.GetName().c_str(), dirty);
