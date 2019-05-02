@@ -9,6 +9,7 @@
 #include <cstring>
 #include <string>
 
+#include <gsl/gsl>
 #include "fighttrack/game_client.h"
 #include "fighttrack/game_server.h"
 
@@ -18,6 +19,11 @@ namespace fighttrack {
 
 int FightTrack::Run(int argc, const char* argv[])
 {
+    auto _flush_io = gsl::finally([] {
+        fflush(stdout);
+        fflush(stderr);
+    });
+
     if (argc < 3 || argc > 4) {
         fprintf(stderr,
                 "Wrong number of arguments!\n"

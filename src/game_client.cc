@@ -37,7 +37,7 @@ static const AsciiArt kMapArt{ {
     "                                                                            ",
     "▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓                 ▓▓▓▓▓▓▓▓▓▓                                 ",
     "                                                                            ",
-    "                    ▓▓▓▓▓▓▓                       ▓▓▓▓▓▓▓▓▓▓                ",
+    "                                         ▓▓▓▓▓▓▓   ▓▓▓▓▓▓▓▓▓▓               ",
     "                                                                            ",
     "         ▓▓▓▓▓▓▓                                                    ▓▓▓▓▓▓▓▓",
 } };
@@ -256,6 +256,7 @@ int GameClient::ProcessNetworkInput()
 int GameClient::ProcessPacket(const std::string& packet)
 {
     constexpr char kPlayerPositionTag = '3';
+    constexpr char kDeleteOtherPlayer = '4';
 
     size_t pos = 0;
     while (pos < packet.length()) {
@@ -270,11 +271,44 @@ int GameClient::ProcessPacket(const std::string& packet)
 
         switch (data[0]) {
             case kPlayerPositionTag: {
+                size_t name_end = data.find_first_of(':', 2);
+                std::string name{ &data[2], name_end - 2 };
                 int x, y;
-                sscanf(&data[2], "%d,%d", &x, &y);
-                player_.SetPosX(x).SetPosY(y);
-                printf("Game: received new player position %dx%d\n", player_.GetPosX(),
-                       player_.GetPosY());
+                sscanf(&data[name_end + 1], "%d,%d", &x, &y);
+                if (name == player_.GetName()) {
+                    player_.SetPosX(x).SetPosY(y);
+                    printf("Game: local player update position %dx%d\n", x, y);
+                }
+                else {
+                    auto rplayer_it = remote_players_.begin();
+                    for (; rplayer_it != remote_players_.end(); ++rplayer_it) {
+                        if (rplayer_it->GetName() == name)
+                            break;
+                    }
+                    if (rplayer_it == remote_players_.end()) {
+                        remote_players_.push_back(Player(name).SetPosX(x).SetPosY(y));
+                        printf("Game: player '%s' entered the game on %dx%d\n",
+                               name.c_str(), x, y);
+                    }
+                    else {
+                        rplayer_it->SetPosX(x).SetPosY(y);
+                        printf("Game: player %s update position %dx%d\n", name.c_str(), x,
+                               y);
+                    }
+                }
+                break;
+            }
+            case kDeleteOtherPlayer: {
+                std::string name{ &data[2], len - 2 };
+                for (auto rplayer_it = remote_players_.begin();
+                     rplayer_it != remote_players_.end(); ++rplayer_it) {
+                    if (rplayer_it->GetName() == name) {
+                        remote_players_.erase(rplayer_it);
+                        break;
+                    }
+                }
+                fprintf(stderr, "Game: failed to delete player %s: player not found\n",
+                        name.c_str());
                 break;
             }
             default:
@@ -292,6 +326,9 @@ int GameClient::ProcessPacket(const std::string& packet)
 void GameClient::Update()
 {
     player_.Update();
+    for (auto& rplayer : remote_players_) {
+        rplayer.Update();
+    }
 }
 
 /**************************************************************************************/
@@ -301,6 +338,9 @@ void GameClient::Render(WINDOW* win)
     box(win, 0, 0);
     map_.Draw(win);
     player_.Draw(win);
+    for (auto& rplayer : remote_players_) {
+        rplayer.Draw(win);
+    }
     wrefresh(win);
 }
 

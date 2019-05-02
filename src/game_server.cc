@@ -35,7 +35,7 @@ static const AsciiArt kMapArt{ {
     "                                                                            ",
     "▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓                 ▓▓▓▓▓▓▓▓▓▓                                 ",
     "                                                                            ",
-    "                    ▓▓▓▓▓▓▓                       ▓▓▓▓▓▓▓▓▓▓                ",
+    "                                         ▓▓▓▓▓▓▓   ▓▓▓▓▓▓▓▓▓▓               ",
     "                                                                            ",
     "         ▓▓▓▓▓▓▓                                                    ▓▓▓▓▓▓▓▓",
 } };
@@ -133,7 +133,8 @@ int GameServer::ProcessNetworkInput()
         switch (msg.status) {
             case ServerSocket::RxStatus::CONNECTED: {
                 printf("Game: new client connected: %d\n", msg.client_id);
-                players_[msg.client_id].SetPosX(2).SetPosY(18);
+                int x = 2 + msg.client_id * 10;
+                players_[msg.client_id].SetPosX(x).SetPosY(18);
                 break;
             }
             case ServerSocket::RxStatus::DISCONNECTED: {
@@ -145,8 +146,19 @@ int GameServer::ProcessNetworkInput()
                         msg.client_id);
                     return -1;
                 }
-                printf("Game: erasing player '%s'\n",
-                       player_it->second.GetName().c_str());
+                std::vector<int> client_ids;
+                client_ids.resize(players_.size() - 1);
+                for (auto& player : players_) {
+                    if (player.first != msg.client_id)
+                        client_ids.push_back(player.first);
+                }
+                std::string name = player_it->second.GetName();
+                if (!client_ids.empty()) {
+                    server_sock_.Transmit(
+                        { .client_ids = client_ids, .buffer = "4:" + name + "\n" });
+                }
+
+                printf("Game: erasing player '%s'\n", name.c_str());
                 players_.erase(player_it);
 
                 printf("Game: client %d disconnected\n", msg.client_id);
@@ -189,7 +201,7 @@ int GameServer::ProcessPacket(int client_id, const std::string& packet)
         switch (data[0]) {
             case kPlayerNameTag: {
                 auto& player = players_[client_id];
-                player.SetName(std::string{ &data[2], len });
+                player.SetName(std::string{ &data[2], len - 2 });
                 printf("Game: player '%s' is online\n", player.GetName().c_str());
                 // player.SetPosX(1).SetPosY(18);
                 break;
@@ -217,21 +229,29 @@ int GameServer::TransmitUpdates()
 {
     constexpr char kPlayerPositionTag = '3';
 
+    std::vector<int> client_ids;
+    client_ids.resize(players_.size());
+
+    std::string message;
+
     for (auto& player_it : players_) {
+        client_ids.push_back(player_it.first);
         auto& player = player_it.second;
-        bool dirty = player.Dirty();
-        printf("player %s is dirty? %d\n", player.GetName().c_str(), dirty);
-        if (dirty) {
-            std::string buffer = { kPlayerPositionTag + std::string(":") +
-                                   std::to_string(player.GetPosX()) + ',' +
-                                   std::to_string(player.GetPosY()) + "\n" };
-            server_sock_.Transmit({
-                .client_ids = { player_it.first },
-                .buffer = buffer,
-            });
-            printf("Transmitted '%s' to player '%s'\n", buffer.c_str(),
-                   player.GetName().c_str());
-        }
+        // bool dirty = player.Dirty();
+        // if (dirty) {
+        char buffer[100];
+        snprintf(buffer, sizeof(buffer), "%c:%s:%d,%d\n", kPlayerPositionTag,
+                 player.GetName().c_str(), player.GetPosX(), player.GetPosY());
+        message += buffer;
+        // }
+    }
+
+    if (!client_ids.empty() && !message.empty()) {
+        printf("Transmitting '%s' to clients\n", message.c_str());
+        server_sock_.Transmit({
+            .client_ids = std::move(client_ids),
+            .buffer = std::move(message),
+        });
     }
 
     return 0;

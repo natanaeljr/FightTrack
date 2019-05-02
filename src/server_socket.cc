@@ -379,9 +379,14 @@ int ServerSocket::HandleClientInput(int client_sock)
             if (errno == EWOULDBLOCK) {
                 break;
             }
-            perror("Failed to read data from client");
-            ret = -1;
-            break;
+            else if (errno == ECONNRESET) {
+                n = 0;  // proceed to connection close below
+            }
+            else {
+                perror("Failed to read data from client");
+                ret = -1;
+                break;
+            }
         }
 
         int client_id;

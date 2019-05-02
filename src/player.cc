@@ -58,6 +58,7 @@ int Player::Update()
 
 void Player::Draw(WINDOW* win)
 {
+    mvwaddnstr(win, pos_y_ - 1, pos_x_ - 2, name_.c_str(), name_.length());
     art_.Draw(pos_x_, pos_y_, win);
 }
 
