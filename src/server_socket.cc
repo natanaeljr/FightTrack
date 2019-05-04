@@ -370,7 +370,7 @@ int ServerSocket::HandleClientInput(int client_sock)
 
     while (true) {
         /* Try to read for incoming data */
-        char buffer[2000];
+        char buffer[4095];
         int n = recv(client_sock, buffer, sizeof(buffer) - 1, MSG_DONTWAIT);
 
         /* Check for error */
@@ -507,12 +507,19 @@ void ServerSocket::TxEventHandler()
                     client_sock = client_it->second.sock;
                 }
                 /* Send data to socket */
-                int n =
-                    send(client_sock, message.buffer.data(), message.buffer.length(), 0);
-                if (n == -1) {
-                    perror("Failed to send data to client");
-                    status = TxStatus::ERROR;
-                    break;  // this message failed, skip remaining clients
+                for (size_t bytes_sent = 0; bytes_sent < message.buffer.length();) {
+                    ssize_t n = send(client_sock, message.buffer.data() + bytes_sent,
+                                     message.buffer.length() - bytes_sent, 0);
+                    if (n == -1) {
+                        perror("Failed to send data to client");
+                        status = TxStatus::ERROR;
+                        break;  // this message failed, skip remaining clients
+                    }
+                    bytes_sent += n;
+                }
+                /* If message failed once, skip remaining clients */
+                if (status != TxStatus::SUCCESS) {
+                    break;
                 }
             }
             /* Message finished, set promise */
